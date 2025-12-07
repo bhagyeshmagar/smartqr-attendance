@@ -7,7 +7,6 @@ services:
     name: smartqr-backend
     runtime: node
     region: oregon
-    plan: free
     buildCommand: npm ci && npx prisma generate && npm run build
     startCommand: npx prisma migrate deploy && node dist/main.js
     healthCheckPath: /api/health
@@ -15,9 +14,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false # Set manually with Neon PostgreSQL URL
+        sync: false
       - key: REDIS_URL
-        sync: false # Set manually with Upstash Redis URL
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: REFRESH_TOKEN_SECRET
@@ -31,7 +30,7 @@ services:
       - key: QR_TTL_SECONDS
         value: "30"
       - key: CORS_ORIGINS
-        sync: false # Set to frontend URL after deployment
+        sync: false
       - key: RATE_LIMIT_TTL
         value: "60"
       - key: RATE_LIMIT_MAX
@@ -43,10 +42,8 @@ services:
     rootDir: backend
 
   # Frontend React Static Site
-  - type: web
+  - type: static
     name: smartqr-frontend
-    runtime: static
-    plan: free
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     headers:
@@ -62,7 +59,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        sync: false # Set to backend URL after deployment
+        sync: false
       - key: VITE_WS_URL
-        sync: false # Set to backend URL after deployment
+        sync: false
     rootDir: frontend
