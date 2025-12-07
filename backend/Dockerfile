@@ -52,5 +52,5 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/health || exit 1
 
-# Start script: resolve any failed migrations, then run migrations and start the app
-CMD ["sh", "-c", "npx prisma migrate resolve --rolled-back 20251205131204_init 2>/dev/null || true; npx prisma migrate deploy && node dist/src/main.js"]
+# Start script: run migrations, seed, then start the app
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"]
