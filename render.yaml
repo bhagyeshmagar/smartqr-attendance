@@ -46,7 +46,6 @@ services:
   - type: web
     name: smartqr-frontend
     runtime: static
-    region: oregon
     plan: free
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
