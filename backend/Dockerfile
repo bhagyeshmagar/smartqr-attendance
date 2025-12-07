@@ -26,7 +26,7 @@ WORKDIR /app
 
 # Copy package files and install production dependencies only
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy prisma schema and generated client
 COPY --from=builder /app/prisma ./prisma
@@ -43,8 +43,8 @@ RUN npx prisma generate
 EXPOSE 4000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/health || exit 1
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start script: run migrations then start the app
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
