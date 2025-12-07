@@ -22,6 +22,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Compile the seed file separately (it's not included in nest build)
+RUN npx tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --resolveJsonModule --skipLibCheck
+
 # Production stage
 FROM node:20-alpine AS production
 
