@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Domain {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  subjects Subject[]
+  sessions Session[]
+
+  @@map("domains")
+}
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         String  @default("STUDENT") // SUPER_ADMIN, ADMIN, STUDENT
+  isActive     Boolean @default(true)
+  profileComplete Boolean @default(false) // Has user completed profile setup?
+  domainId     String?
+  domain       Domain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+
+  // Admin-assigned fields
+  prn          String?  @unique  // Permanent Registration Number
+
+  // Personal details (student-editable)
+  dateOfBirth      DateTime?
+  gender           String?    // Male, Female, Other
+  nationality      String?
+  phone            String?
+  currentAddress   String?
+  permanentAddress String?
+
+  // Academic info (JSON string)
+  academicMarks    String?    // { "10th": "85%", "12th": "90%", "degree": "75%" }
+
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  attendances      Attendance[]
+  createdSessions  Session[]    @relation("SessionCreator")
+  createdSubjects  Subject[]    @relation("SubjectCreator")
+  deleteRequests   DeleteRequest[] @relation("RequestedBy")
+  approvedRequests DeleteRequest[] @relation("ApprovedBy")
+
+  @@index([email])
+  @@index([domainId])
+  @@index([prn])
+  @@map("users")
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "Introduction to Computer Science"
+  code        String?  // e.g., "CS101"
+  description String?
+  domainId    String
+  domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation("SubjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+  deleteRequests DeleteRequest[]
+
+  @@index([domainId])
+  @@map("subjects")
+}
+
+model Session {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  status      String  @default("DRAFT") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  phase       String  @default("ENTRY") // ENTRY, EXIT - current QR phase
+  
+  // Link to subject
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  sessionNumber Int    @default(1) // Session 1, 2, 3... of this subject
+  
+  domainId    String
+  domain      Domain  @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User    @relation("SessionCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  startedAt   DateTime?
+  endedAt     DateTime?
+  scheduledAt DateTime?
+
+  // Token rotation counter for this session
+  rotationCounter Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendances Attendance[]
+  deleteRequests DeleteRequest[]
+
+  @@index([domainId])
+  @@index([subjectId])
+  @@index([status])
+  @@map("sessions")
+}
+
+model Attendance {
+  id        String  @id @default(uuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Entry/Exit tracking
+  entryAt   DateTime?  // When student scanned entry QR
+  exitAt    DateTime?  // When student scanned exit QR
+  status    String     @default("PENDING") // PENDING, PRESENT, ABSENT
+
+  // Legacy field for backward compatibility
+  markedAt DateTime @default(now())
+
+  // Token timing info (for the scan that created this record)
+  tokenIat DateTime // Token issued at time
+  tokenExp DateTime // Token expiry time
+
+  // Device/Network metadata
+  ip        String
+  userAgent String
+  deviceFp  String? // Optional device fingerprint
+  geo       String? // JSON string: { country, city, lat, lon }
+
+  // Verification flags for fraud detection
+  verificationFlags String? // JSON string: { flagged: boolean, reason?: string }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // UNIQUE constraint: one attendance per user per session
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([markedAt])
+  @@index([status])
+  @@map("attendances")
+}
+
+// Delete request for approval workflow
+model DeleteRequest {
+  id          String   @id @default(uuid())
+  type        String   // SESSION, SUBJECT
+  reason      String?
+  status      String   @default("PENDING") // PENDING, APPROVED, DENIED
+  
+  // What to delete
+  sessionId   String?
+  session     Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  // Who requested
+  requestedById String
+  requestedBy   User   @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  
+  // Who approved/denied
+  approvedById  String?
+  approvedBy    User?  @relation("ApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@map("delete_requests")
+}
+
