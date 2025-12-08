@@ -30,26 +30,33 @@ SmartQR is a secure, real-time attendance management system designed for educati
 ## 3. System Architecture
 ```mermaid
 graph TD
-    subgraph Frontend
-        Client[React SPA]
-        QRScanner[QR Scanner Component]
-        Modal[Floating Modal]
-        ThemeToggle[Theme Toggle]
-    end
-    subgraph Backend
-        API[NestJS API]
-        WS[Socket.io Server]
-        Queue[BullMQ (Redis)]
-        DB[(Prisma → SQLite/Postgres)]
-    end
-    Client -->|HTTP/REST| API
-    Client -->|WebSocket| WS
-    API -->|Prisma ORM| DB
-    API -->|BullMQ| Queue
-    QRScanner -->|POST /attendance/scan| API
-    Modal -->|POST /sessions| API
-    ThemeToggle -->|localStorage| Client
-    WS -->|emit attendance.update| Client
+
+%% Frontend nodes (each node on its own line)
+subgraph Frontend
+  Client[React SPA]
+  QRScanner[QR Scanner Component]
+  Modal[Floating Modal]
+  ThemeToggle[Theme Toggle]
+end
+
+%% Backend nodes (each node on its own line; DB label kept simple)
+subgraph Backend
+  API[NestJS API]
+  WS[Socket.io Server]
+  Queue[BullMQ - Redis]
+  DB[Database: Prisma / SQLite or Postgres]
+end
+
+%% Connections (each connection on its own line)
+Client -->|HTTP / REST| API
+Client -->|WebSocket| WS
+API -->|Prisma ORM| DB
+API -->|BullMQ| Queue
+QRScanner -->|POST /attendance/scan| API
+Modal -->|POST /sessions| API
+ThemeToggle -->|localStorage| Client
+WS -->|emit attendance.update| Client
+
 ```
 
 ## 4. Database Schema (ERD)
