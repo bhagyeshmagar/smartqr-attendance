@@ -112,15 +112,8 @@ export class DeleteRequestsService {
             throw new BadRequestException('Request has already been processed');
         }
 
-        // Delete the target based on type
-        if (request.type === 'SESSION' && request.sessionId) {
-            await this.prisma.session.delete({ where: { id: request.sessionId } });
-        } else if (request.type === 'SUBJECT' && request.subjectId) {
-            await this.prisma.subject.delete({ where: { id: request.subjectId } });
-        }
-
-        // Update request status
-        return this.prisma.deleteRequest.update({
+        // Update request status FIRST (before deleting target which cascades)
+        const updatedRequest = await this.prisma.deleteRequest.update({
             where: { id: requestId },
             data: {
                 status: 'APPROVED',
@@ -135,6 +128,15 @@ export class DeleteRequestsService {
                 },
             },
         });
+
+        // Delete the target based on type (this will cascade delete the request too)
+        if (request.type === 'SESSION' && request.sessionId) {
+            await this.prisma.session.delete({ where: { id: request.sessionId } });
+        } else if (request.type === 'SUBJECT' && request.subjectId) {
+            await this.prisma.subject.delete({ where: { id: request.subjectId } });
+        }
+
+        return updatedRequest;
     }
 
     async denyRequest(requestId: string, approverId: string, approverRole: string) {
