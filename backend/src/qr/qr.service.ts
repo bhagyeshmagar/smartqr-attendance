@@ -9,6 +9,7 @@ export interface TokenPayload {
     iat: number; // Issued at (Unix timestamp in seconds)
     exp: number; // Expires at (Unix timestamp in seconds)
     rot: number; // Rotation counter
+    pha: string; // Phase: 'ENTRY' | 'EXIT'
 }
 
 export interface ParsedToken {
@@ -36,7 +37,7 @@ export class QrService {
      * Generate a signed token for a session
      * Token format: <base64_payload>.<hex_signature>
      */
-    generateToken(sessionId: string, rotationCounter: number = 0, domainId: string = ''): string {
+    generateToken(sessionId: string, rotationCounter: number = 0, domainId: string = '', phase: string = 'ENTRY'): string {
         const now = Math.floor(Date.now() / 1000);
         // Align iat to token TTL intervals for predictable rotation
         const iat = Math.floor(now / this.tokenTtl) * this.tokenTtl;
@@ -48,6 +49,7 @@ export class QrService {
             iat,
             exp,
             rot: rotationCounter,
+            pha: phase, // Include phase in token
         };
 
         const payloadStr = JSON.stringify(payload);
@@ -112,6 +114,47 @@ export class QrService {
     }
 
     /**
+     * Verify token with full session state validation
+     * Checks rotation counter and phase against current session state
+     * @param token - The QR token to verify
+     * @param currentRotationCounter - Current rotation counter from database
+     * @param currentPhase - Current phase from database ('ENTRY' or 'EXIT')
+     */
+    verifyTokenWithSession(
+        token: string,
+        currentRotationCounter: number,
+        currentPhase: string,
+    ): { valid: boolean; payload?: TokenPayload; error?: string } {
+        // First do basic verification (signature + expiry)
+        const basicResult = this.verifyToken(token);
+        if (!basicResult.valid || !basicResult.payload) {
+            return basicResult;
+        }
+
+        const { rot: tokenRotation, pha: tokenPhase } = basicResult.payload;
+
+        // Check phase matches
+        if (tokenPhase !== currentPhase) {
+            return {
+                valid: false,
+                error: `Token phase mismatch: expected ${currentPhase}, got ${tokenPhase}`,
+            };
+        }
+
+        // Check rotation counter with ±1 tolerance for race conditions
+        // (student might scan right as QR rotates)
+        const rotationDiff = Math.abs(tokenRotation - currentRotationCounter);
+        if (rotationDiff > 1) {
+            return {
+                valid: false,
+                error: `Token rotation expired: expected ${currentRotationCounter}, got ${tokenRotation}`,
+            };
+        }
+
+        return { valid: true, payload: basicResult.payload };
+    }
+
+    /**
      * Create HMAC-SHA256 signature
      */
     private sign(data: string): string {
@@ -122,20 +165,21 @@ export class QrService {
      * Start token rotation for a session
      * Broadcasts new tokens via WebSocket at regular intervals
      */
-    startTokenRotation(sessionId: string, domainId: string = ''): void {
+    startTokenRotation(sessionId: string, domainId: string = '', phase: string = 'ENTRY'): void {
         // Stop any existing rotation for this session
         this.stopTokenRotation(sessionId);
 
+        // Always start fresh with counter 0 for new rotation
         let rotationCounter = 0;
 
-        // Generate and broadcast immediately
-        const token = this.generateToken(sessionId, rotationCounter, domainId);
+        // Generate and broadcast immediately with phase
+        const token = this.generateToken(sessionId, rotationCounter, domainId, phase);
         this.wsGateway.broadcastToken(sessionId, token);
 
         // Set up interval for rotation
         const interval = setInterval(() => {
             rotationCounter++;
-            const newToken = this.generateToken(sessionId, rotationCounter, domainId);
+            const newToken = this.generateToken(sessionId, rotationCounter, domainId, phase);
             this.wsGateway.broadcastToken(sessionId, newToken);
         }, this.tokenTtl * 1000);
 

@@ -39,28 +39,37 @@ export class AttendanceService {
         dto: ScanAttendanceDto,
         meta: AttendanceMetadata,
     ) {
-        // 1. Verify the token
-        const verification = this.qrService.verifyToken(dto.token);
-        if (!verification.valid || !verification.payload) {
-            throw new BadRequestException(verification.error || 'Invalid token');
+        // 1. Parse token first to get session ID
+        const parsed = this.qrService.parseToken(dto.token);
+        if (!parsed) {
+            throw new BadRequestException('Invalid token format');
         }
 
-        const { sid: sessionId, iat, exp } = verification.payload;
+        const { sid: sessionId, iat, exp } = parsed.payload;
 
-        // 2. Check if session is active
-        const isActive = await this.sessionsService.isActive(sessionId);
-        if (!isActive) {
-            throw new BadRequestException('Session is not active');
-        }
-
-        // 3. Get session details for phase check
+        // 2. Get session with current state for validation
         const session = await this.prisma.session.findUnique({
             where: { id: sessionId },
-            select: { id: true, domainId: true, phase: true },
+            select: { id: true, domainId: true, phase: true, status: true, rotationCounter: true },
         });
 
         if (!session) {
             throw new NotFoundException('Session not found');
+        }
+
+        // 3. Check if session is active
+        if (session.status !== 'ACTIVE') {
+            throw new BadRequestException('Session is not active');
+        }
+
+        // 4. Full token verification including rotation counter and phase
+        const verification = this.qrService.verifyTokenWithSession(
+            dto.token,
+            session.rotationCounter,
+            session.phase,
+        );
+        if (!verification.valid || !verification.payload) {
+            throw new BadRequestException(verification.error || 'Invalid token');
         }
 
         const currentPhase = session.phase as SessionPhase;

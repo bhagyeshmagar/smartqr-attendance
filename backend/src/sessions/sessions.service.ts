@@ -149,6 +149,7 @@ export class SessionsService {
             where: { id },
             data: {
                 phase: SessionPhase.EXIT,
+                rotationCounter: 0, // Reset counter for new phase
             },
             include: {
                 domain: { select: { id: true, name: true, slug: true } },

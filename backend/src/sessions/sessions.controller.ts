@@ -79,7 +79,8 @@ export class SessionsController {
     @ApiOperation({ summary: 'Start a session (begin accepting attendance)' })
     async start(@Param('id') id: string) {
         const session = await this.sessionsService.start(id);
-        this.qrService.startTokenRotation(id);
+        // Start token rotation with ENTRY phase
+        this.qrService.startTokenRotation(id, session.domain?.id || '', 'ENTRY');
         return session;
     }
 
@@ -87,7 +88,11 @@ export class SessionsController {
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
     @ApiOperation({ summary: 'Switch session to exit phase' })
     async switchToExitPhase(@Param('id') id: string) {
-        return this.sessionsService.switchToExitPhase(id);
+        const session = await this.sessionsService.switchToExitPhase(id);
+        // Stop existing rotation and restart with EXIT phase (resets counter)
+        this.qrService.stopTokenRotation(id);
+        this.qrService.startTokenRotation(id, session.domain?.id || '', 'EXIT');
+        return session;
     }
 
     @Post(':id/stop')

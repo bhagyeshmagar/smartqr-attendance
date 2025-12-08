@@ -107,8 +107,10 @@ describe('QrService', () => {
 
         it('should reject token with invalid signature', () => {
             const token = service.generateToken('test-session');
-            const [payload] = token.split('.');
-            const tamperedToken = `${payload}.invalidsignature123`;
+            const [payload, signature] = token.split('.');
+            // Create a fake signature of the same length to avoid buffer length mismatch
+            const tamperedSignature = 'a'.repeat(signature.length);
+            const tamperedToken = `${payload}.${tamperedSignature}`;
 
             const result = service.verifyToken(tamperedToken);
             expect(result.valid).toBe(false);
@@ -116,17 +118,18 @@ describe('QrService', () => {
         });
 
         it('should reject expired token', () => {
-            // Create a token with expired timestamp
+            // Create a token with expired timestamp (includes pha field)
             const payload = {
                 sid: 'test-session',
                 did: 'domain',
                 iat: Math.floor(Date.now() / 1000) - 100,
                 exp: Math.floor(Date.now() / 1000) - 50,
                 rot: 0,
+                pha: 'ENTRY', // Include phase field
             };
             const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
             // Note: This will fail signature check too, demonstrating multi-layer validation
-            const fakeToken = `${payloadBase64}.fakesig`;
+            const fakeToken = `${payloadBase64}.${'a'.repeat(64)}`;
 
             const result = service.verifyToken(fakeToken);
             expect(result.valid).toBe(false);
@@ -169,6 +172,61 @@ describe('QrService', () => {
     describe('getTokenTtl', () => {
         it('should return configured TTL', () => {
             expect(service.getTokenTtl()).toBe(30);
+        });
+    });
+
+    describe('verifyTokenWithSession', () => {
+        it('should accept token with matching rotation counter and phase', () => {
+            const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
+            const result = service.verifyTokenWithSession(token, 5, 'ENTRY');
+
+            expect(result.valid).toBe(true);
+            expect(result.payload).toBeDefined();
+        });
+
+        it('should accept token within rotation tolerance (+1)', () => {
+            const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
+            const result = service.verifyTokenWithSession(token, 6, 'ENTRY');
+
+            expect(result.valid).toBe(true);
+        });
+
+        it('should accept token within rotation tolerance (-1)', () => {
+            const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
+            const result = service.verifyTokenWithSession(token, 4, 'ENTRY');
+
+            expect(result.valid).toBe(true);
+        });
+
+        it('should reject token with expired rotation counter', () => {
+            const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
+            const result = service.verifyTokenWithSession(token, 10, 'ENTRY');
+
+            expect(result.valid).toBe(false);
+            expect(result.error).toContain('rotation');
+        });
+
+        it('should reject token with wrong phase (ENTRY token in EXIT phase)', () => {
+            const token = service.generateToken('test-session', 0, 'domain', 'ENTRY');
+            const result = service.verifyTokenWithSession(token, 0, 'EXIT');
+
+            expect(result.valid).toBe(false);
+            expect(result.error).toContain('phase');
+        });
+
+        it('should reject token with wrong phase (EXIT token in ENTRY phase)', () => {
+            const token = service.generateToken('test-session', 0, 'domain', 'EXIT');
+            const result = service.verifyTokenWithSession(token, 0, 'ENTRY');
+
+            expect(result.valid).toBe(false);
+            expect(result.error).toContain('phase');
+        });
+
+        it('should include phase in generated token', () => {
+            const token = service.generateToken('test-session', 0, 'domain', 'EXIT');
+            const parsed = service.parseToken(token);
+
+            expect(parsed?.payload.pha).toBe('EXIT');
         });
     });
 });
