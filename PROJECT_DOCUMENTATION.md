@@ -114,11 +114,12 @@ sequenceDiagram
 ### 5.2 Theme Toggle (User)
 ```mermaid
 flowchart LR
-    A[User clicks Theme Toggle] --> B{Current Theme?}
-    B -->|Light| C[Set data-theme="dark"]
-    B -->|Dark| D[Set data-theme="light"]
-    C & D --> E[Persist choice in localStorage]
-    E --> F[UI updates via CSS variables]
+  A[User clicks Theme Toggle] --> B{Current Theme?}
+  B -->|Light| C[Set data-theme=dark]
+  B -->|Dark| D[Set data-theme=light]
+  C --> E[Persist choice in localStorage]
+  D --> E[Persist choice in localStorage]
+  E --> F[UI updates via CSS variables]
 ```
 ### 5.3 Attendance Marking (Student)
 ```mermaid
@@ -143,10 +144,12 @@ stateDiagram-v2
     HomePage -->|Navigate| SessionList : click "Sessions"
     SessionList -->|Navigate| SessionDetail : click a session
     SessionDetail -->|Back| SessionList : click back
+
     note right of SessionList
         CSS classes .page-enter / .page-exit
         animate translateX & opacity
-    end
+    end note
+
 ```
 
 ## 6. Key Features Implementation
