@@ -1602,35 +1602,255 @@ select.form-input {
 }
 
 /* =========================================
-   RESPONSIVE
+   RESPONSIVE - MOBILE FIRST
    ========================================= */
 
+/* Tablet Breakpoint */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 1.5rem;
+  }
+  
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile Breakpoint */
 @media (max-width: 768px) {
   .header {
-    margin: 10px;
+    margin: 8px;
     padding: 0.75rem 1rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 0.75rem;
+    top: 8px;
   }
 
   .header-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
 
   .nav {
     flex-wrap: wrap;
+    justify-content: center;
     gap: 0.25rem;
+    width: 100%;
   }
 
   .nav-link {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.85rem;
-  }
-
-  .page-title {
-    font-size: 1.875rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
 
   .main-content {
     padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  /* Cards - Full Width */
+  .card,
+  .glass-card {
+    padding: 1rem;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Forms - Stack Labels */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Buttons - Full Width on Mobile */
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Tables - Horizontal Scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 600px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Modal - Full Screen on Mobile */
+  .modal-content {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .modal-overlay {
+    padding: 0;
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  /* Session Card */
+  .session-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  /* User List */
+  .user-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  /* QR Code */
+  .qr-container {
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  /* Scanner */
+  .scanner-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Profile */
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-avatar {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Small Mobile Breakpoint */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
+  .header {
+    margin: 4px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+  }
+
+  .header-title {
+    font-size: 1rem;
+  }
+
+  .nav-link {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    padding: 1rem;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  /* Hide non-essential columns on very small screens */
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Touch-friendly targets */
+@media (pointer: coarse) {
+  .nav-link,
+  .btn,
+  .form-input,
+  .form-select {
+    min-height: 44px; /* Apple's recommended minimum */
+  }
+
+  .data-table td,
+  .data-table th {
+    padding: 0.875rem 0.5rem;
+  }
+}
+
+/* Landscape orientation fixes */
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal-content {
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+
+  .scanner-container {
+    max-height: 60vh;
   }
 }

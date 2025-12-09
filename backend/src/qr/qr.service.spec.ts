@@ -176,7 +176,7 @@ describe('QrService', () => {
     });
 
     describe('verifyTokenWithSession', () => {
-        it('should accept token with matching rotation counter and phase', () => {
+        it('should accept valid token with matching phase', () => {
             const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
             const result = service.verifyTokenWithSession(token, 5, 'ENTRY');
 
@@ -184,26 +184,13 @@ describe('QrService', () => {
             expect(result.payload).toBeDefined();
         });
 
-        it('should accept token within rotation tolerance (+1)', () => {
+        it('should accept token regardless of rotation counter (timestamp is the validator)', () => {
+            // Rotation counter mismatch should NOT cause rejection
+            // Timestamp expiry handles freshness validation
             const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
-            const result = service.verifyTokenWithSession(token, 6, 'ENTRY');
+            const result = service.verifyTokenWithSession(token, 100, 'ENTRY');
 
             expect(result.valid).toBe(true);
-        });
-
-        it('should accept token within rotation tolerance (-1)', () => {
-            const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
-            const result = service.verifyTokenWithSession(token, 4, 'ENTRY');
-
-            expect(result.valid).toBe(true);
-        });
-
-        it('should reject token with expired rotation counter', () => {
-            const token = service.generateToken('test-session', 5, 'domain', 'ENTRY');
-            const result = service.verifyTokenWithSession(token, 10, 'ENTRY');
-
-            expect(result.valid).toBe(false);
-            expect(result.error).toContain('rotation');
         });
 
         it('should reject token with wrong phase (ENTRY token in EXIT phase)', () => {

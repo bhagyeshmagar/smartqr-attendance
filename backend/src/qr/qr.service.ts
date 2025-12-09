@@ -115,9 +115,10 @@ export class QrService {
 
     /**
      * Verify token with full session state validation
-     * Checks rotation counter and phase against current session state
+     * Checks phase against current session state
+     * Note: Rotation counter validation removed - timestamp expiry is sufficient
      * @param token - The QR token to verify
-     * @param currentRotationCounter - Current rotation counter from database
+     * @param currentRotationCounter - Not used (kept for API compatibility)
      * @param currentPhase - Current phase from database ('ENTRY' or 'EXIT')
      */
     verifyTokenWithSession(
@@ -131,9 +132,9 @@ export class QrService {
             return basicResult;
         }
 
-        const { rot: tokenRotation, pha: tokenPhase } = basicResult.payload;
+        const { pha: tokenPhase } = basicResult.payload;
 
-        // Check phase matches
+        // Check phase matches (prevents ENTRY token from being used in EXIT phase)
         if (tokenPhase !== currentPhase) {
             return {
                 valid: false,
@@ -141,15 +142,8 @@ export class QrService {
             };
         }
 
-        // Check rotation counter with ±1 tolerance for race conditions
-        // (student might scan right as QR rotates)
-        const rotationDiff = Math.abs(tokenRotation - currentRotationCounter);
-        if (rotationDiff > 1) {
-            return {
-                valid: false,
-                error: `Token rotation expired: expected ${currentRotationCounter}, got ${tokenRotation}`,
-            };
-        }
+        // Rotation counter validation removed - timestamp expiry (30s) already prevents
+        // old screenshots from working. The token's exp field ensures freshness.
 
         return { valid: true, payload: basicResult.payload };
     }
