@@ -146,6 +146,18 @@ export class UsersController {
         return this.usersService.deleteUser(id, user.id, user.role);
     }
 
+    @Patch(':id/domain')
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @ApiOperation({ summary: 'Update user domain (Admin: own domain only, Super Admin: any)' })
+    async updateDomain(
+        @Param('id') id: string,
+        @Body('domainId') domainId: string,
+        @Req() req: Request,
+    ) {
+        const user = req.user as AuthUser;
+        return this.usersService.updateDomain(id, domainId, user.id, user.role);
+    }
+
     @Patch('change-password')
     @ApiOperation({ summary: 'Change own password' })
     async changePassword(
@@ -156,3 +168,4 @@ export class UsersController {
         return this.usersService.changePassword(user.id, body.currentPassword, body.newPassword);
     }
 }
+

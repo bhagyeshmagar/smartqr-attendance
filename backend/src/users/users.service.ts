@@ -373,4 +373,45 @@ export class UsersService {
 
         return { message: 'Password changed successfully' };
     }
+
+    async updateDomain(userId: string, domainId: string, requesterId: string, requesterRole: string) {
+        // Get target user
+        const targetUser = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!targetUser) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Only students can have their domain updated
+        if (targetUser.role !== UserRole.STUDENT) {
+            throw new ForbiddenException('Can only update domain for students');
+        }
+
+        // Admin can only assign students to their own domain
+        if (requesterRole === UserRole.ADMIN) {
+            const requester = await this.prisma.user.findUnique({ where: { id: requesterId } });
+            if (!requester?.domainId || requester.domainId !== domainId) {
+                throw new ForbiddenException('Admins can only assign students to their own domain');
+            }
+        }
+
+        // Verify domain exists
+        const domain = await this.prisma.domain.findUnique({ where: { id: domainId } });
+        if (!domain) {
+            throw new NotFoundException('Domain not found');
+        }
+
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { domainId },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                domainId: true,
+            },
+        });
+    }
 }
+
