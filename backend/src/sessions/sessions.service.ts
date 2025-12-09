@@ -9,6 +9,18 @@ export class SessionsService {
     constructor(private readonly prisma: PrismaService) { }
 
     async create(dto: CreateSessionDto, userId: string) {
+        // Get the creator's domain to use for the session
+        const creator = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { domainId: true, role: true },
+        });
+
+        // Use creator's domain for regular admins, or specified domain for super admin
+        let sessionDomainId = dto.domainId;
+        if (creator?.role !== UserRole.SUPER_ADMIN && creator?.domainId) {
+            sessionDomainId = creator.domainId;
+        }
+
         // Get next session number for this subject
         let sessionNumber = 1;
         if (dto.subjectId) {
@@ -24,7 +36,7 @@ export class SessionsService {
             data: {
                 title: dto.title,
                 description: dto.description,
-                domainId: dto.domainId,
+                domainId: sessionDomainId,
                 subjectId: dto.subjectId,
                 sessionNumber,
                 createdById: userId,
