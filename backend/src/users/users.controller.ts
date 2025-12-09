@@ -52,13 +52,22 @@ export class UsersController {
     @ApiOperation({ summary: 'Create a new student (Admin or Super Admin)' })
     async createStudent(
         @Body() body: { email: string; firstName: string; lastName: string; tempPassword: string; domainId?: string },
+        @Req() req: Request,
     ) {
+        const user = req.user as AuthUser;
+        // Admin: use their own domain; Super Admin: use provided domainId or null
+        let domainId = body.domainId;
+        if (user.role === UserRole.ADMIN) {
+            // Get admin's domain
+            const admin = await this.usersService.findById(user.id);
+            domainId = admin.domainId || undefined;
+        }
         return this.usersService.createStudent(
             body.email,
             body.firstName,
             body.lastName,
             body.tempPassword,
-            body.domainId,
+            domainId,
         );
     }
 
